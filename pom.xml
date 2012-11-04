@@ -18,7 +18,7 @@
   <repositories>
     <repository>
       <id>asset</id>
-      <url>http://ci.assetgateway.com/plugin/repository</url>
+      <url>http://ci.assetgateway.com/plugin/repository/everything</url>
     </repository>
     <repository>
       <id>repobo-snap</id>
