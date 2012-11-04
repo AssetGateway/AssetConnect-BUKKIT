@@ -1,8 +1,0 @@
-name: AssetConnect
-version: 28
-description: Connects to a connect server
-
-author: AssetGateway
-website: http://assetgateway.com/
-
-main: asset.connect.bukkit.ConnectPlugin
