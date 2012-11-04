@@ -11,6 +11,8 @@
   
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <build.number>Unknown</build.number>
+    <main.class>asset.connect.bukkit.ConnectPlugin</main.class>
   </properties>
   
   <repositories>
