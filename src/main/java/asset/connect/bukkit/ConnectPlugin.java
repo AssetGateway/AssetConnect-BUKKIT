@@ -14,7 +14,7 @@ public class ConnectPlugin extends JavaPlugin {
 
 	private ExecutorService executorService;
 	private Connect connect;
-	private ConnectTask connectTask;
+	private ConnectThread connectThread;
 	
 	private String authenticationKey;
 	
@@ -23,11 +23,11 @@ public class ConnectPlugin extends JavaPlugin {
 		try {
 			this.executorService = Executors.newFixedThreadPool(4);
 			this.connect = new ConnectImpl(this.executorService, new ConnectSettingsImpl(this.getConfig()), this.getInboundAddress().getHostName());
-			this.connectTask = new ConnectTask(this);
+			this.connectThread = new ConnectThread(this);
 			
-			this.connectTask.setId(this.getServer().getScheduler().scheduleAsyncRepeatingTask(this, this.connectTask, 20L, 20L));
 			this.getServer().getServicesManager().register(Connect.class, this.connect, this, ServicePriority.Normal);
 			this.getServer().getPluginManager().registerEvents(new ConnectPluginListener(this), this);
+			this.connectThread.start();
 		} catch(Exception exception) {
 			exception.printStackTrace();
 		}
@@ -39,6 +39,9 @@ public class ConnectPlugin extends JavaPlugin {
 			if(this.executorService != null) {
 				this.executorService.shutdownNow();
 			}
+			if(this.connectThread != null) {
+				this.connectThread.stop();
+			}
 			if(this.connect != null) {
 				this.connect.close();
 			}
@@ -47,7 +50,7 @@ public class ConnectPlugin extends JavaPlugin {
 		} finally {
 			this.executorService = null;
 			this.connect = null;
-			this.connectTask = null;
+			this.connectThread = null;
 		}
 	}
 	
