@@ -27,7 +27,11 @@ public class ConnectPlugin extends JavaPlugin {
 			
 			this.getServer().getServicesManager().register(Connect.class, this.connect, this, ServicePriority.Normal);
 			this.getServer().getPluginManager().registerEvents(new ConnectPluginListener(this), this);
-			this.connectThread.start();
+			this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+				public void run() {
+					ConnectPlugin.this.connectThread.start();
+				}
+			});
 		} catch(Exception exception) {
 			exception.printStackTrace();
 		}
