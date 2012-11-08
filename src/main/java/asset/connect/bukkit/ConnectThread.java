@@ -7,6 +7,7 @@ import asset.connect.api.request.impl.AuthenticateRequest;
 import asset.connect.api.request.impl.KeyRequest;
 import asset.connect.api.result.impl.AnnounceResult;
 import asset.connect.api.result.impl.AuthenticateResult;
+import asset.connect.api.result.impl.KeyResult;
 
 public class ConnectThread implements Runnable {
 
@@ -39,54 +40,79 @@ public class ConnectThread implements Runnable {
 		ConnectSettings settings = connect.getSettings();
 		try {
 			while(!connect.isClosed()) {
+				// connect
 				try {
 					connect.connect();
 				} catch(Exception exception) {
 					connect.disconnect();
-					System.out.println("[Connect] Couldn't connect to remote host: " + exception.getMessage());
+					System.out.println("[Connect] Couldn't connect to remote host: \"" + exception.getMessage() + "\", retrying");
 					Thread.sleep(1000L);
 					continue;
 				}
 				
-				String authenticationKey = connect.request(new KeyRequest()).await().getKey();
-				AuthenticateResult authenticationResult = this.connectPlugin.getConnect().request(new AuthenticateRequest(settings.getUsername(), settings.getPassword(), this.connectPlugin.getAuthenticationKey())).await();
+				// key
+				KeyResult keyResult = connect.request(new KeyRequest()).await(1000L);
+				if(keyResult == null) {
+					connect.disconnect();
+					System.out.println("[Connect] Connection timed out while keying, retrying");
+					Thread.sleep(1000L);
+					continue;
+				}
+				
+				// authenticate
+				AuthenticateResult authenticationResult = this.connectPlugin.getConnect().request(new AuthenticateRequest(settings.getUsername(), settings.getPassword(), keyResult.getKey())).await(1000L);
+				if(authenticationResult == null) {
+					connect.disconnect();
+					System.out.println("[Connect] Connection timed out while authenticating, retrying");
+					Thread.sleep(1000L);
+					continue;
+				}
 				switch(authenticationResult.getStatusCode()) {
 				case SUCCESS:
 					break;
 				case INVALID_CREDENTIALS:
 					connect.disconnect();
-					System.out.println("[Connect] Invalid username or password");
+					System.out.println("[Connect] Invalid username or password, retrying");
 					Thread.sleep(1000L);
 					continue;
 				default:
 					connect.disconnect();
-					System.out.println("[Connect] Unknown error while authenticating: " + authenticationResult.getStatusCode());
+					System.out.println("[Connect] Unknown error while authenticating: \"" + authenticationResult.getStatusCode() + "\", retrying");
 					Thread.sleep(1000L);
 					continue;
 				}
 				
-				AnnounceResult announceResult = this.connectPlugin.getConnect().request(new AnnounceRequest(this.connectPlugin.getInboundAddress().getPort())).await();
+				// announce
+				AnnounceResult announceResult = this.connectPlugin.getConnect().request(new AnnounceRequest(this.connectPlugin.getInboundAddress().getPort())).await(1000L);
+				if(announceResult == null) {
+					connect.disconnect();
+					System.out.println("[Connect] Connection timed out while announcing, retrying");
+					Thread.sleep(1000L);
+					continue;
+				}
 				switch(announceResult.getStatusCode()) {
 				case SUCCESS:
 					break;
 				default:
 					connect.disconnect();
-					System.out.println("[Connect] Unknown error while announcing: " + announceResult.getStatusCode());
+					System.out.println("[Connect] Unknown error while announcing: \"" + announceResult.getStatusCode() + "\", retrying");
 					Thread.sleep(1000L);
 					continue;
 				}
 				
+				// pause
 				System.out.println("[Connect] Connected to the cloud");
-				this.connectPlugin.setAuthenticationKey(authenticationKey);
+				this.connectPlugin.setAuthenticationKey(keyResult.getKey());
 				while(connect.isConnected()) {
 					Thread.sleep(1000L);
 				}
 				this.connectPlugin.setAuthenticationKey(null);
+				System.out.println("[Connect] Lost connection to the cloud, reconnecting");
 			}
 		} catch(InterruptedException exception) {
 			//ignore
 		} catch(Exception exception) {
-			System.out.println("==== FATAL ==== Please report this error to AssetGateway:");
+			System.out.println("-=== FATAL ====- Please report this error to AssetGateway:");
 			exception.printStackTrace();
 		}
 	}
