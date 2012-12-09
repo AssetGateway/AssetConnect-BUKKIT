@@ -5,9 +5,9 @@ import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
-import net.minecraft.server.NetworkManager;
+import net.minecraft.server.v1_4_5.NetworkManager;
 
-import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_4_5.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
