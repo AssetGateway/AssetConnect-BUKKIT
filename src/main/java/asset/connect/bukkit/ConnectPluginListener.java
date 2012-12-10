@@ -1,13 +1,11 @@
 package asset.connect.bukkit;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
-import net.minecraft.server.v1_4_5.NetworkManager;
+import net.minecraft.server.NetworkManager;
 
-import org.bukkit.craftbukkit.v1_4_5.entity.CraftPlayer;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -15,6 +13,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
+
+import asset.connect.bukkit.util.ReflectionUtils;
 
 import com.google.common.collect.MapMaker;
 
@@ -39,8 +39,8 @@ public class ConnectPluginListener implements Listener {
 			return;
 		}
 		InetSocketAddress playerAddress = new InetSocketAddress(playerData[1], Integer.parseInt(playerData[2]));
+		ReflectionUtils.setFinalField(PlayerLoginEvent.class, playerLoginEvent, "address", playerAddress.getAddress());
 		this.playersToAddresses.put(playerLoginEvent.getPlayer(), playerAddress);
-		setFinalField(PlayerLoginEvent.class, playerLoginEvent, "address", playerAddress.getAddress());
 		if(playerLoginEvent.getResult() == Result.KICK_BANNED
 				&& playerLoginEvent.getKickMessage().startsWith("Your IP address is banned from this server!\nReason: ")) {
 			if(this.connectPlugin.getServer().getIPBans().contains(playerData[1])) {
@@ -56,24 +56,7 @@ public class ConnectPluginListener implements Listener {
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerJoin(PlayerJoinEvent playerJoinEvent) {
 		Player player = playerJoinEvent.getPlayer();
-		setFinalField(NetworkManager.class, (NetworkManager) ((CraftPlayer) player).getHandle().netServerHandler.networkManager, "j", this.playersToAddresses.remove(player));
-	}
-	
-	public static <T> boolean setFinalField(Class<T> clazz, T instance, String fieldName, Object value) {
-		try {
-			Field field = clazz.getDeclaredField(fieldName);
-			field.setAccessible(true);
-
-			Field modifiersField = Field.class.getDeclaredField("modifiers");
-			modifiersField.setAccessible(true);
-			modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-
-			field.set(instance, value);
-			return true;
-		} catch (Exception exception) {
-			exception.printStackTrace();
-			return false;
-		}
+		ReflectionUtils.setFinalField(NetworkManager.class, (NetworkManager) ((CraftPlayer) player).getHandle().netServerHandler.networkManager, "j", this.playersToAddresses.remove(player));
 	}
 	
 }

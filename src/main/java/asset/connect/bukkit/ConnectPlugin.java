@@ -4,10 +4,15 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import net.minecraft.server.MinecraftServer;
+
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.craftbukkit.CraftServer;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import asset.connect.api.Connect;
+import asset.connect.bukkit.util.ReflectionUtils;
 import asset.connect.lib.ConnectImpl;
 
 public class ConnectPlugin extends JavaPlugin {
@@ -22,7 +27,7 @@ public class ConnectPlugin extends JavaPlugin {
 	public void onEnable() {
 		try {
 			this.executorService = Executors.newFixedThreadPool(4);
-			this.connect = new ConnectImpl(this.executorService, new ConnectSettingsImpl(this.getConfig()), this.getInboundAddress().getHostName());
+			this.connect = new ConnectImpl(this.executorService, new ConnectSettingsImpl(this.getConfig()), this.getInboundAddress().getAddress().getHostAddress());
 			this.connectThread = new ConnectThread(this);
 			
 			this.getServer().getServicesManager().register(Connect.class, this.connect, this, ServicePriority.Normal);
@@ -32,6 +37,14 @@ public class ConnectPlugin extends JavaPlugin {
 					ConnectPlugin.this.connectThread.start();
 				}
 			});
+			
+			CraftServer craftServer = ((CraftServer) super.getServer());
+			// offline mode
+			MinecraftServer minecraftServer = ReflectionUtils.getPrivateField(craftServer, MinecraftServer.class, "console");
+			minecraftServer.setOnlineMode(false);
+			// connection throttle
+			YamlConfiguration configuration = ReflectionUtils.getPrivateField(craftServer, YamlConfiguration.class, "configuration");
+			configuration.set("settings.connection-throttle", 0);
 		} catch(Exception exception) {
 			exception.printStackTrace();
 		}
