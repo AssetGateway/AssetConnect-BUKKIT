@@ -3,9 +3,9 @@ package asset.connect.bukkit;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
-import net.minecraft.server.NetworkManager;
+import net.minecraft.server.v1_4_6.NetworkManager;
 
-import org.bukkit.craftbukkit.entity.CraftPlayer;
+import org.bukkit.craftbukkit.v1_4_6.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -56,7 +56,7 @@ public class ConnectPluginListener implements Listener {
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerJoin(PlayerJoinEvent playerJoinEvent) {
 		Player player = playerJoinEvent.getPlayer();
-		ReflectionUtils.setFinalField(NetworkManager.class, (NetworkManager) ((CraftPlayer) player).getHandle().netServerHandler.networkManager, "j", this.playersToAddresses.remove(player));
+		ReflectionUtils.setFinalField(NetworkManager.class, (NetworkManager) ((CraftPlayer) player).getHandle().playerConnection.networkManager, "j", this.playersToAddresses.remove(player));
 	}
 	
 }
