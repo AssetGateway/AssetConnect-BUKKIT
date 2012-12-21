@@ -3,18 +3,19 @@ package asset.connect.bukkit.util;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
+
 public class ReflectionUtils {
 
-	public static <T> boolean setFinalField(Class<T> clazz, T instance, String fieldName, Object value) {
+	public static <T> boolean setFinalField(Class<?> net, Object networkManager, String fieldName, Object value) {
 		try {
-			Field field = clazz.getDeclaredField(fieldName);
+			Field field = net.getDeclaredField(fieldName);
 			field.setAccessible(true);
 
 			Field modifiersField = Field.class.getDeclaredField("modifiers");
 			modifiersField.setAccessible(true);
 			modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
 
-			field.set(instance, value);
+			field.set(networkManager, value);
 			return true;
 		} catch (Exception exception) {
 			exception.printStackTrace();

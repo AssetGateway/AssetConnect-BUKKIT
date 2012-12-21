@@ -1,11 +1,11 @@
 package asset.connect.bukkit;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.Map;
 
-import net.minecraft.server.v1_4_6.NetworkManager;
-
-import org.bukkit.craftbukkit.v1_4_6.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -56,7 +56,45 @@ public class ConnectPluginListener implements Listener {
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerJoin(PlayerJoinEvent playerJoinEvent) {
 		Player player = playerJoinEvent.getPlayer();
-		ReflectionUtils.setFinalField(NetworkManager.class, (NetworkManager) ((CraftPlayer) player).getHandle().playerConnection.networkManager, "j", this.playersToAddresses.remove(player));
+	
+		try {
+			Method getHandle = player.getClass().getMethod("getHandle");
+			Object entityPlayer = getHandle.invoke(player);
+					
+			boolean legacy = false;
+			
+			for (Field f : entityPlayer.getClass().getFields()){
+				if (f.getName().equals("netServerHandler")){
+					legacy = true;
+					break;
+				}
+			}
+			
+			Field playerConnection_field = entityPlayer.getClass().getField(legacy ? "netServerHandler" : "playerConnection");
+			Object playerConnection = playerConnection_field.get(entityPlayer);
+			
+			
+			Field networkManager_field = playerConnection.getClass().getField("networkManager");
+			Object networkManager = networkManager_field.get(playerConnection);
+			
+			ReflectionUtils.setFinalField(
+					networkManager.getClass(), networkManager, "j", this.playersToAddresses.remove(player)
+			);
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			e.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
+		} catch (SecurityException e) {
+			e.printStackTrace();
+		} catch (NoSuchFieldException e) {
+			e.printStackTrace();
+		}
+		
 	}
+	
 	
 }
