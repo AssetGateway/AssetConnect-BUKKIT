@@ -6,16 +6,16 @@ import java.lang.reflect.Modifier;
 
 public class ReflectionUtils {
 
-	public static <T> boolean setFinalField(Class<?> net, Object networkManager, String fieldName, Object value) {
+	public static boolean setFinalField(Class<?> objectClass, Object object, String fieldName, Object value) {
 		try {
-			Field field = net.getDeclaredField(fieldName);
+			Field field = objectClass.getDeclaredField(fieldName);
 			field.setAccessible(true);
 
 			Field modifiersField = Field.class.getDeclaredField("modifiers");
 			modifiersField.setAccessible(true);
 			modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
 
-			field.set(networkManager, value);
+			field.set(object, value);
 			return true;
 		} catch (Exception exception) {
 			exception.printStackTrace();

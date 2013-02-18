@@ -1,6 +1,5 @@
 package asset.connect.bukkit;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
@@ -37,25 +36,16 @@ public class ConnectPlugin extends JavaPlugin {
 				}
 			});
 			
-			// Grab CraftServer
 			Object craftServer = super.getServer();
+			Object minecraftServer = ReflectionUtils.getPrivateField(craftServer, Object.class, "console");
 			
-			// Get "protected final MinecraftServer console"
-			Field console_field = craftServer.getClass().getDeclaredField("console");
-			console_field.setAccessible(true);
-			Object console = console_field.get(craftServer);
+			// Set Offline Mode
+			Object booleanWrapperOnline = ReflectionUtils.getPrivateField(craftServer, Object.class, "online");
+			ReflectionUtils.setFinalField(booleanWrapperOnline.getClass(), booleanWrapperOnline, "value", false);
+			Method setOnlineMode = minecraftServer.getClass().getMethod("setOnlineMode", boolean.class);
+			setOnlineMode.invoke(minecraftServer, Boolean.FALSE);
 			
-			for (Method m : console.getClass().getMethods()){
-				if (m.getName().equals("setOnlineMode")){
-					System.out.println(m.getParameterTypes().toString());
-				}
-			}
-			
-			// Set offline mode
-			Method setOnlineMode = console.getClass().getMethod("setOnlineMode", boolean.class);
-			setOnlineMode.invoke(console, Boolean.FALSE);
-			
-			// Connection throttle
+			// Connection Throttle
 			YamlConfiguration configuration = ReflectionUtils.getPrivateField(craftServer, YamlConfiguration.class, "configuration");
 			configuration.set("settings.connection-throttle", 0);
 		} catch(Exception exception) {

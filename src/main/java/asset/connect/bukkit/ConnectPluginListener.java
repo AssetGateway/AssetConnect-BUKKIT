@@ -1,7 +1,6 @@
 package asset.connect.bukkit;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.util.Map;
@@ -29,6 +28,7 @@ public class ConnectPluginListener implements Listener {
 	
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerLogin(PlayerLoginEvent playerLoginEvent) {
+		// verify integrity
 		String[] playerData = playerLoginEvent.getHostname().split("\\:")[0].split("\\;");
 		if(playerData.length != 3) {
 			playerLoginEvent.disallow(Result.KICK_OTHER, "Authentication Failed");
@@ -38,11 +38,14 @@ public class ConnectPluginListener implements Listener {
 			playerLoginEvent.disallow(Result.KICK_OTHER, "Authentication Failed");
 			return;
 		}
+		
+		// store IP address
 		InetSocketAddress playerAddress = new InetSocketAddress(playerData[1], Integer.parseInt(playerData[2]));
 		ReflectionUtils.setFinalField(PlayerLoginEvent.class, playerLoginEvent, "address", playerAddress.getAddress());
 		this.playersToAddresses.put(playerLoginEvent.getPlayer(), playerAddress);
-		if(playerLoginEvent.getResult() == Result.KICK_BANNED
-				&& playerLoginEvent.getKickMessage().startsWith("Your IP address is banned from this server!\nReason: ")) {
+		
+		// emulate a normal login procedure with the IP address
+		if(playerLoginEvent.getResult() == Result.KICK_BANNED && playerLoginEvent.getKickMessage().startsWith("Your IP address is banned from this server!\nReason: ")) {
 			if(this.connectPlugin.getServer().getIPBans().contains(playerData[1])) {
 				playerLoginEvent.disallow(Result.KICK_BANNED, "Your IP address is banned from this server!");
 			} else if(this.connectPlugin.getServer().getOnlinePlayers().length >= this.connectPlugin.getServer().getMaxPlayers()) {
@@ -56,44 +59,38 @@ public class ConnectPluginListener implements Listener {
 	@EventHandler(priority = EventPriority.LOWEST)
 	public void onPlayerJoin(PlayerJoinEvent playerJoinEvent) {
 		Player player = playerJoinEvent.getPlayer();
-	
+		
+		// store IP address
 		try {
-			Method getHandle = player.getClass().getMethod("getHandle");
-			Object entityPlayer = getHandle.invoke(player);
-					
-			boolean legacy = false;
+			Method getHandleMethod = player.getClass().getMethod("getHandle");
+			Object entityPlayer = getHandleMethod.invoke(player);
 			
-			for (Field f : entityPlayer.getClass().getFields()){
-				if (f.getName().equals("netServerHandler")){
-					legacy = true;
-					break;
+			// old MC support
+			String playerConnectionFieldName = "playerConnection";
+			for (Field field : entityPlayer.getClass().getFields()){
+				if (!field.getName().equals("netServerHandler")){
+					continue;
 				}
+				playerConnectionFieldName = "netServerHandler";
+				break;
 			}
 			
-			Field playerConnection_field = entityPlayer.getClass().getField(legacy ? "netServerHandler" : "playerConnection");
-			Object playerConnection = playerConnection_field.get(entityPlayer);
+			Field playerConnectionField = entityPlayer.getClass().getField(playerConnectionFieldName);
+			Object playerConnection = playerConnectionField.get(entityPlayer);
 			
+			Field networkManagerField = playerConnection.getClass().getField("networkManager");
+			Object networkManager = networkManagerField.get(playerConnection);
 			
-			Field networkManager_field = playerConnection.getClass().getField("networkManager");
-			Object networkManager = networkManager_field.get(playerConnection);
+			// spigot support
+			String socketAddressFieldName = "j";
+			if(networkManager.getClass().getName().equals("NettyNetworkManager")) {
+				socketAddressFieldName = "address";
+			}
 			
-			ReflectionUtils.setFinalField(
-					networkManager.getClass(), networkManager, "j", this.playersToAddresses.remove(player)
-			);
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
-		} catch (InvocationTargetException e) {
-			e.printStackTrace();
-		} catch (NoSuchMethodException e) {
-			e.printStackTrace();
-		} catch (SecurityException e) {
-			e.printStackTrace();
-		} catch (NoSuchFieldException e) {
-			e.printStackTrace();
+			ReflectionUtils.setFinalField(networkManager.getClass(), networkManager, socketAddressFieldName, this.playersToAddresses.remove(player));
+		} catch (Exception exception) {
+			exception.printStackTrace();
 		}
-		
 	}
 	
 	
