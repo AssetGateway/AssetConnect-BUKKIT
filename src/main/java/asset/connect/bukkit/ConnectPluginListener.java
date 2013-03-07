@@ -3,6 +3,7 @@ package asset.connect.bukkit;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Map;
 
 import org.bukkit.entity.Player;
@@ -41,7 +42,11 @@ public class ConnectPluginListener implements Listener {
 		
 		// store IP address
 		InetSocketAddress playerAddress = new InetSocketAddress(playerData[1], Integer.parseInt(playerData[2]));
-		ReflectionUtils.setFinalField(PlayerLoginEvent.class, playerLoginEvent, "address", playerAddress.getAddress());
+		try {
+			ReflectionUtils.setFinalField(PlayerLoginEvent.class, playerLoginEvent, "address", playerAddress.getAddress());
+		} catch(Exception exception) {
+			System.out.println("[Connect] Failed to store player address in PlayerLoginEvent");
+		}
 		this.playersToAddresses.put(playerLoginEvent.getPlayer(), playerAddress);
 		
 		// emulate a normal login procedure with the IP address
@@ -81,19 +86,15 @@ public class ConnectPluginListener implements Listener {
 			Field networkManagerField = playerConnection.getClass().getField("networkManager");
 			Object networkManager = networkManagerField.get(playerConnection);
 			
-			// spigot support
-			String socketAddressFieldName = "j";
-			for(Field field : networkManager.getClass().getFields()) {
-				if (!field.getName().equals("address")){
-					continue;
-				}
-				socketAddressFieldName = "address";
-				break;
+			// hackish spigot support
+			SocketAddress playerAddress = this.playersToAddresses.remove(player);
+			try {
+				ReflectionUtils.setFinalField(networkManager.getClass(), networkManager, "j", playerAddress);
+			} catch(Exception exception) {
+				ReflectionUtils.setFinalField(networkManager.getClass(), networkManager, "address", playerAddress);
 			}
-			
-			ReflectionUtils.setFinalField(networkManager.getClass(), networkManager, socketAddressFieldName, this.playersToAddresses.remove(player));
 		} catch (Exception exception) {
-			exception.printStackTrace();
+			System.out.println("[Connect] Failed to store player address in INetworkManager");
 		}
 	}
 	
