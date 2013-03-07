@@ -83,8 +83,12 @@ public class ConnectPluginListener implements Listener {
 			
 			// spigot support
 			String socketAddressFieldName = "j";
-			if(networkManager.getClass().getName().equals("NettyNetworkManager")) {
+			for(Field field : networkManager.getClass().getClass().getFields()) {
+				if (!field.getName().equals("address")){
+					continue;
+				}
 				socketAddressFieldName = "address";
+				break;
 			}
 			
 			ReflectionUtils.setFinalField(networkManager.getClass(), networkManager, socketAddressFieldName, this.playersToAddresses.remove(player));
