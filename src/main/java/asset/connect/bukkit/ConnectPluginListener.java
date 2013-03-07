@@ -83,7 +83,7 @@ public class ConnectPluginListener implements Listener {
 			
 			// spigot support
 			String socketAddressFieldName = "j";
-			for(Field field : networkManager.getClass().getClass().getFields()) {
+			for(Field field : networkManager.getClass().getFields()) {
 				if (!field.getName().equals("address")){
 					continue;
 				}
