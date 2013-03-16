@@ -86,12 +86,18 @@ public class ConnectPluginListener implements Listener {
 			Field networkManagerField = playerConnection.getClass().getField("networkManager");
 			Object networkManager = networkManagerField.get(playerConnection);
 			
-			// hackish spigot support
 			SocketAddress playerAddress = this.playersToAddresses.remove(player);
 			try {
-				ReflectionUtils.setFinalField(networkManager.getClass(), networkManager, "j", playerAddress);
+				// 1.5
+				ReflectionUtils.setFinalField(networkManager.getClass(), networkManager, "k", playerAddress);
 			} catch(Exception exception) {
-				ReflectionUtils.setFinalField(networkManager.getClass(), networkManager, "address", playerAddress);
+				try {
+					// spigot
+					ReflectionUtils.setFinalField(networkManager.getClass(), networkManager, "address", playerAddress);
+				} catch(Exception exception1) {
+					// 1.4
+					ReflectionUtils.setFinalField(networkManager.getClass(), networkManager, "j", playerAddress);
+				}
 			}
 		} catch (Exception exception) {
 			System.out.println("[Connect] Failed to store player address in INetworkManager");
